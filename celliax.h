@@ -8,6 +8,8 @@
 #define CELLIAX_SVN_VERSION "????NO_REVISION???"
 #endif
 
+#define AST_MODULE "chan_celliax"
+
 #include <asterisk/version.h>   /* needed here for conditional compilation on version.h */
   /* the following #defs are for LINUX */
 #ifndef __CYGWIN__
@@ -772,7 +774,7 @@ int celliax_serial_call(struct celliax_pvt *p, char *dstr);
 
 /* FUNCTIONS */
 /* PBX interface functions */
-struct ast_channel *celliax_request(const char *type, int format, void *data, int *cause);
+struct ast_channel *celliax_request(const char *type, format_t format, const struct ast_channel *requestor, void *data, int *cause);
 int celliax_answer(struct ast_channel *c);
 int celliax_hangup(struct ast_channel *c);
 int celliax_call(struct ast_channel *c, char *idest, int timeout);
@@ -883,7 +885,7 @@ int celliax_dir_do(struct ast_channel *chan, struct ast_config *cfg, char *conte
 void celliax_cb1(char *s, size_t len, void *data);
 void celliax_cb2(char c, void *data);
 #endif /* CELLIAX_LIBCSV */
-int celliax_sendsms(struct ast_channel *c, void *data);
+int celliax_sendsms(struct ast_channel *c, const char *data);
 int celliax_console_echo(int fd, int argc, char *argv[]);
 int celliax_console_at(int fd, int argc, char *argv[]);
 #ifdef ASTERISK_VERSION_1_2

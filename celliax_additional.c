@@ -459,10 +459,10 @@ struct ast_frame *alsa_read(struct celliax_pvt *p)
   //memset(&f, 0, sizeof(struct ast_frame)); //giova
 
   f.frametype = AST_FRAME_NULL;
-  f.subclass = 0;
+  f.subclass.integer = 0;
   f.samples = 0;
   f.datalen = 0;
-  f.data = NULL;
+  f.data.ptr = NULL;
   f.offset = 0;
   f.src = celliax_type;
   f.mallocd = 0;
@@ -555,10 +555,10 @@ struct ast_frame *alsa_read(struct celliax_pvt *p)
     left = CELLIAX_FRAME_SIZE;
 
     f.frametype = AST_FRAME_VOICE;
-    f.subclass = AST_FORMAT_SLINEAR;
+    f.subclass.codec = AST_FORMAT_SLINEAR;
     f.samples = CELLIAX_FRAME_SIZE;
     f.datalen = CELLIAX_FRAME_SIZE * 2;
-    f.data = buf;
+    f.data.ptr = buf;
     f.offset = AST_FRIENDLY_OFFSET;
     f.src = celliax_type;
     f.mallocd = 0;
@@ -578,7 +578,7 @@ int alsa_write(struct celliax_pvt *p, struct ast_frame *f)
   static char silencebuf[8000];
   static int sizpos = 0;
   int len = sizpos;
-  int pos;
+//  int pos;
   int res = 0;
   time_t now_timestamp;
   /* size_t frames = 0; */
@@ -591,9 +591,9 @@ int alsa_write(struct celliax_pvt *p, struct ast_frame *f)
     ERRORA("Frame too large\n", CELLIAX_P_LOG);
     res = -1;
   } else {
-    memcpy(sizbuf + sizpos, f->data, f->datalen);
+    memcpy(sizbuf + sizpos, f->data.ptr, f->datalen);
     len += f->datalen;
-    pos = 0;
+    // pos = 0;
 #ifdef ALSA_MONITOR
     alsa_monitor_write(sizbuf, len);
 #endif
@@ -3122,14 +3122,14 @@ int ucs2_to_utf8(struct celliax_pvt *p, char *ucs2_in, char *utf8_out,
   inbytesleft = i;
   iconv_res = iconv(iconv_format, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
   if (iconv_res == (size_t) - 1) {
-    DEBUGA_AT("ciao in=%s, inleft=%d, out=%s, outleft=%d, converted=%s, utf8_out=%s\n",
+    DEBUGA_AT("ciao in=%s, inleft=%ld, out=%s, outleft=%ld, converted=%s, utf8_out=%s\n",
               CELLIAX_P_LOG, inbuf, inbytesleft, outbuf, outbytesleft, converted,
               utf8_out);
     DEBUGA_AT("error: %s %d\n", CELLIAX_P_LOG, strerror(errno), errno);
     return -1;
   }
   DEBUGA_AT
-    ("iconv_res=%d,  in=%s, inleft=%d, out=%s, outleft=%d, converted=%s, utf8_out=%s\n",
+    ("iconv_res=%d,  in=%s, inleft=%ld, out=%s, outleft=%ld, converted=%s, utf8_out=%s\n",
      CELLIAX_P_LOG, iconv_res, inbuf, inbytesleft, outbuf, outbytesleft, converted,
      utf8_out);
   iconv_close(iconv_format);
@@ -3162,7 +3162,7 @@ int utf_to_ucs2(struct celliax_pvt *p, char *utf_in, size_t inbytesleft, char *u
   }
   outbytesleft = 16000;
 
-  DEBUGA_AT("in=%s, inleft=%d, out=%s, outleft=%d, utf_in=%s, converted=%s\n",
+  DEBUGA_AT("in=%s, inleft=%ld, out=%s, outleft=%ld, utf_in=%s, converted=%s\n",
             CELLIAX_P_LOG, inbuf, inbytesleft, outbuf, outbytesleft, utf_in, converted);
   iconv_res = iconv(iconv_format, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
   if (iconv_res == (size_t) - 1) {
@@ -3170,7 +3170,7 @@ int utf_to_ucs2(struct celliax_pvt *p, char *utf_in, size_t inbytesleft, char *u
     return -1;
   }
   DEBUGA_AT
-    ("iconv_res=%d,  in=%s, inleft=%d, out=%s, outleft=%d, utf_in=%s, converted=%s\n",
+    ("iconv_res=%d,  in=%s, inleft=%ld, out=%s, outleft=%ld, utf_in=%s, converted=%s\n",
      CELLIAX_P_LOG, iconv_res, inbuf, inbytesleft, outbuf, outbytesleft, utf_in,
      converted);
   iconv_close(iconv_format);
@@ -3189,9 +3189,9 @@ int utf_to_ucs2(struct celliax_pvt *p, char *utf_in, size_t inbytesleft, char *u
   return 0;
 }
 
-int celliax_sendsms(struct ast_channel *c, void *data)
+int celliax_sendsms(struct ast_channel *c, const char *data)
 {
-  char *idest = data;
+  const char *idest = data;
   char rdest[256];
   struct celliax_pvt *p = NULL;
   char *device;
@@ -3343,7 +3343,7 @@ int celliax_sendsms(struct ast_channel *c, void *data)
     }
 
     smscommand[strlen(smscommand)] = 0x1A;
-    DEBUGA_AT("smscommand len is: %d, text is:|||%s|||\n", CELLIAX_P_LOG,
+    DEBUGA_AT("smscommand len is: %ld, text is:|||%s|||\n", CELLIAX_P_LOG,
               strlen(smscommand), smscommand);
 
     err = celliax_serial_write_AT_ack_nocr_longtime(p, smscommand);
@@ -3515,8 +3515,8 @@ int celliax_console_celliax_dir_export(int fd, int argc, char *argv[])
   char *context = "default";
   char *s;
   char *var, *value;
-  int fromcell = 0;
-  int fromskype = 0;
+  // int fromcell = 0;
+  // int fromskype = 0;
   char name[256] = "";
   char phonebook_direct_calling_ext[7] = "";
   char write_entry_command[256] = "";
@@ -3616,13 +3616,13 @@ int celliax_console_celliax_dir_export(int fd, int argc, char *argv[])
       /* Find a candidate extension */
       start = strdup(v->value);
       if (strcasestr(start, "fromcell=yes")) {
-        fromcell = 1;
-        fromskype = 0;
+        // fromcell = 1;
+        // fromskype = 0;
 
       }
       if (strcasestr(start, "fromskype=yes")) {
-        fromcell = 0;
-        fromskype = 1;
+        // fromcell = 0;
+        // fromskype = 1;
 
       }
 
@@ -3713,13 +3713,13 @@ int celliax_console_celliax_dir_export(int fd, int argc, char *argv[])
       /* Find a candidate extension */
       start = strdup(v->value);
       if (strcasestr(start, "fromcell=yes")) {
-        fromcell = 1;
-        fromskype = 0;
+        // fromcell = 1;
+        // fromskype = 0;
 
       }
       if (strcasestr(start, "fromskype=yes")) {
-        fromcell = 0;
-        fromskype = 1;
+        // fromcell = 0;
+        // fromskype = 1;
 
       }
 

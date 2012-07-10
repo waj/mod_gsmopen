@@ -23,8 +23,9 @@ AST_INCLUDE_DIR=/usr/src/asterisk-1.4.27.1/include
 #ASTERISK VERSION
 #Uncomment one of the following lines to match your Asterisk series
 #CFLAGS+=-DASTERISK_VERSION_1_2
-CFLAGS+=-DASTERISK_VERSION_1_4
-#CFLAGS+=-DASTERISK_VERSION_1_6_0
+#CFLAGS+=-DASTERISK_VERSION_1_4
+CFLAGS+=-DASTERISK_VERSION_1_6_0
+CFLAGS+=-DASTERISK_VERSION_1_6_0_1
 
 CFLAGS+=-pipe -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
 CFLAGS+=-g3

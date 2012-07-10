@@ -562,7 +562,7 @@ int celliax_indicate(struct ast_channel *c, int cond, const void *data, size_t d
 
 /*! \brief PBX interface function -build celliax pvt structure 
  *         celliax calls initiated by the PBX arrive here */
-struct ast_channel *celliax_request(const char *type, int format, void *data, int *cause)
+struct ast_channel *celliax_request(const char *type, format_t format, const struct ast_channel *requestor, void *data, int *cause)
 {
   struct celliax_pvt *p = NULL;
   struct ast_channel *tmp = NULL;
@@ -572,7 +572,7 @@ struct ast_channel *celliax_request(const char *type, int format, void *data, in
     DEBUGA_PBX("ENTERING FUNC\n", CELLIAX_P_LOG);
   }
 
-  DEBUGA_PBX("Try to request type: %s, name: %s, cause: %d," " format: %d\n",
+  DEBUGA_PBX("Try to request type: %s, name: %s, cause: %d," " format: %ld\n",
              CELLIAX_P_LOG, type, name, *cause, format);
 
   if (!data) {
@@ -597,7 +597,7 @@ struct ast_channel *celliax_request(const char *type, int format, void *data, in
       if ((format & AST_FORMAT_SLINEAR) != 0) {
         /* is this interface unowned? */
         if (!p->owner) {
-          DEBUGA_PBX("Requesting: %s, name: %s, format: %d\n", CELLIAX_P_LOG, type, name,
+          DEBUGA_PBX("Requesting: %s, name: %s, format: %ld\n", CELLIAX_P_LOG, type, name,
                      format);
           /* create a new channel owning this interface */
           tmp = celliax_new(p, AST_STATE_DOWN, p->context);
@@ -612,7 +612,7 @@ struct ast_channel *celliax_request(const char *type, int format, void *data, in
         }
       } else {
         /* requested format not supported */
-        WARNINGA("format %d not supported\n", CELLIAX_P_LOG, format);
+        WARNINGA("format %ld not supported\n", CELLIAX_P_LOG, format);
         *cause = AST_CAUSE_BEARERCAPABILITY_NOTAVAIL;
       }
       /* we found the requested interface, bail out from the while loop */
@@ -933,7 +933,7 @@ struct ast_frame *celliax_read(struct ast_channel *c)
 #endif /* CELLIAX_PORTAUDIO */
 
     f.frametype = AST_FRAME_NULL;
-    f.subclass = 0;
+    f.subclass.integer = 0;
     f.samples = 0;
     f.datalen = 0;
 #ifdef ASTERISK_VERSION_1_6_0_1
@@ -990,7 +990,7 @@ struct ast_frame *celliax_read(struct ast_channel *c)
     if (actual) {
       //if (option_debug)
         NOTICA("delta_usec=%ld, inband audio DTMF: %s\n", CELLIAX_P_LOG, ( (now_timestamp.tv_sec - p->dtmf_timestamp.tv_sec) * 1000000) + (now_timestamp.tv_usec - p->dtmf_timestamp.tv_usec), buf);
-      struct ast_frame f2 = { AST_FRAME_DTMF, buf[0], };
+      struct ast_frame f2 = { AST_FRAME_DTMF, {buf[0]}, };
       ast_queue_frame(p->owner, &f2);
   	gettimeofday(&p->dtmf_timestamp, NULL);
     }
@@ -1152,7 +1152,7 @@ struct ast_channel *celliax_new(struct celliax_pvt *p, int state, char *context)
 #else
   //tmp = ast_channel_alloc(1, state, 0, 0, "", p->exten, p->context, 0, "");
   tmp =
-    ast_channel_alloc(1, state, 0, 0, "", p->exten, p->context, 0, "Celliax/%s", p->name);
+    ast_channel_alloc(1, state, 0, 0, "", p->exten, p->context, 0, 0, "Celliax/%s", p->name);
 
 #endif /* ASTERISK_VERSION_1_4 */
   if (tmp) {
@@ -1244,7 +1244,7 @@ int res;
       if (ast_pbx_start(tmp)) {
         ERRORA("Unable to start PBX on %s\n", CELLIAX_P_LOG, tmp->name);
         ast_dsp_free(p->dsp);
-        ast_channel_free(tmp);
+        ast_channel_release(tmp);
         if (option_debug) {
           DEBUGA_PBX("EXITING FUNC\n", CELLIAX_P_LOG);
         }
@@ -1256,7 +1256,7 @@ int res;
         0) {
       ERRORA("Unable to start controldev thread.\n", CELLIAX_P_LOG);
       ast_dsp_free(p->dsp);
-      ast_channel_free(tmp);
+      ast_channel_release(tmp);
       tmp = NULL;
     }
     DEBUGA_SERIAL("STARTED controldev_thread=%lu STOP=%lu NULL=%lu\n", CELLIAX_P_LOG,
@@ -1573,7 +1573,7 @@ struct celliax_pvt *celliax_mkif(struct ast_config *cfg, char *ctg, int is_first
   int debug_serial = 0;
   int debug_sound = 0;
   int debug_pbx = 0;
-  int debug_skype = 0;
+  // int debug_skype = 0;
   int debug_call = 0;
   int debug_locks = 0;
   int debug_monitorlocks = 0;
@@ -1642,7 +1642,7 @@ struct celliax_pvt *celliax_mkif(struct ast_config *cfg, char *ctg, int is_first
       M_BOOL("debug_serial", debug_serial)
       M_BOOL("debug_sound", debug_sound)
       M_BOOL("debug_pbx", debug_pbx)
-      M_BOOL("debug_skype", debug_skype)
+      // M_BOOL("debug_skype", debug_skype)
       M_BOOL("debug_call", debug_call)
       M_BOOL("debug_locks", debug_locks)
       M_BOOL("debug_monitorlocks", debug_monitorlocks)
@@ -2064,7 +2064,7 @@ int celliax_restart_monitor(void)
  *         */
 void *celliax_do_monitor(void *data)
 {
-  fd_set rfds;
+  ast_fdset rfds;
   int res;
   struct celliax_pvt *p = NULL;
   int max = -1;
@@ -2248,7 +2248,7 @@ void *celliax_do_monitor(void *data)
 
 void *celliax_do_audio_monitor(void *data)
 {
-  fd_set rfds;
+  ast_fdset rfds;
   int res;
   struct celliax_pvt *p = NULL;
   int max = -1;
@@ -3036,12 +3036,12 @@ int celliax_console_dial(int fd, int argc, char *argv[])
 
   if (p->owner) {               /* already in a call */
     int i;
-    struct ast_frame f = { AST_FRAME_DTMF, 0 };
+    struct ast_frame f = { AST_FRAME_DTMF, {0} };
 
     s = argv[1];
     /* send the string one char at a time */
     for (i = 0; i < strlen(s); i++) {
-      f.subclass = s[i];
+      f.subclass.integer = s[i];
       ast_queue_frame(p->owner, &f);
     }
     return RESULT_SUCCESS;
